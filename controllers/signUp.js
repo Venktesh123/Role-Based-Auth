@@ -1,16 +1,15 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 
 const SignUp = async (req, res) => {
   console.log("signup");
   try {
-    const { name, email, password, organizationName } = req.body;
+    const { name, email, password } = req.body;
 
     // Validate input
-    if (!name || !email || !password || !organizationName) {
+    if (!name || !email || !password) {
       return res.status(400).json({
-        error: "Name, email, password, and organizationName are required.",
+        error: "Name, email, and password are required.",
       });
     }
 
@@ -20,19 +19,6 @@ const SignUp = async (req, res) => {
       return res.status(400).json({ error: "Email is already registered." });
     }
 
-    // Find or create the organization
-    let organization = await Organization.findOne({ name: organizationName });
-    if (!organization) {
-      organization = new Organization({ name: organizationName });
-      await organization.save();
-    }
-
-    // Check if this is the first user in the organization
-    const existingOrgUsers = await User.find({
-      organization: organization._id,
-    });
-    const role = existingOrgUsers.length === 0 ? "admin" : "viewer";
-
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -41,8 +27,6 @@ const SignUp = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      organization: organization._id,
-      role,
     });
 
     await user.save();
@@ -53,8 +37,7 @@ const SignUp = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        organization: organization.name,
-        role: user.role,
+        role: user.role, // Role will default to "user" as per the schema
       },
     });
   } catch (error) {
@@ -62,3 +45,5 @@ const SignUp = async (req, res) => {
     return res.status(500).json({ error: "Internal server error." });
   }
 };
+
+module.exports = { SignUp };
